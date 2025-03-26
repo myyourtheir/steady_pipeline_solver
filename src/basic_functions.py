@@ -5,6 +5,9 @@ d = C.diameter
 g = C.g
 vapor_pressure = C.vapor_pressure
 roughness = C.roughness
+
+dx=C.dx
+
 def find_V(Q):
   return 4*Q/(np.pi*d**2)
 
@@ -30,18 +33,8 @@ def find_lyam(Re: int, eps: float = roughness/d):
 def find_i(lyam, V):
     return lyam/d*V**2/2/g
 
-def find_H(prev_H, i, x, prev_x):
-    return prev_H + i*(prev_x-x)
+def find_H(prev_H, i):
+    return prev_H + i*dx
 
 def find_p(ro, H, z):
     return ro*g* (H - z)
-
-
-def remake_parameters_with_gravity_section(p, H, prev_x, prev_H, ro, prev_z, z, prev_i, x):
-    if p> vapor_pressure:
-        return p, H
-    else:
-        numerator = (prev_H - prev_z) - vapor_pressure/ro/g
-        denominator = (prev_z - z) + prev_i* (prev_x - x)
-        gravity_x = prev_x + numerator/denominator * (prev_x - x)
-        return vapor_pressure, z+vapor_pressure/ro/g
