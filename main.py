@@ -23,26 +23,20 @@ NPS_list = C.NPS_list
 
 def make_profiles():
   profile_x = np.arange(0, L, dx)
-  profile_z = np.sin(profile_x / L * 10 * np.pi) * 50
+  # profile_z = np.zeros(profile_x.size)
+  profile_z = np.sin(profile_x / L * 10 * np.pi) * 100
   # Учет НПС
   nps_vsas_indexes = []
   for nps in NPS_list:
     index = np.where(profile_x == nps.position)[0][0]
     nps_vsas_indexes.append(index)
     profile_x = np.insert(profile_x, index, nps.position)
-    profile_z = np.insert(profile_z, index, nps.position)
+    profile_z = np.insert(profile_z, index, profile_z[index])
+    
   return profile_x, profile_z,nps_vsas_indexes
 
 
-def calc_section(Q, prev_H, z):
-  """ Q - м3/ч H - м x - м"""
-  V = find_V(Q)
-  Re = find_Re(V, viscosity_1)
-  lyam = find_lyam(Re)
-  i = find_i(lyam, V)
-  H = find_H(prev_H, i)
-  p = find_p(ro, H, z)
-  return [p, H]
+
 
 if __name__ == '__main__':
   profile_x, profile_z,nps_vsas_indexes = make_profiles()
@@ -54,6 +48,10 @@ if __name__ == '__main__':
   iter=0
   while can_continue:
     Q=(Qmax+Qmin)/2
+    V = find_V(Q)
+    Re = find_Re(V, viscosity_1)
+    lyam = find_lyam(Re)
+    i = find_i(lyam, V)
     p_list = np.zeros(profile_x.size)
     H_list = np.zeros(profile_x.size)
     p_list[-1] = pL
@@ -64,17 +62,18 @@ if __name__ == '__main__':
     while index>=0:
 
       prev_H = H_list[index+1]
-      prev_x = profile_x[index+1]
-      prev_z = profile_z[index+1]
       x = profile_x[index]
       z = profile_z[index]
+
       current_Q = Q
 
       # Проверка на отвод
       if profile_x[index]>=withdrawal_position and has_withdrawal:
         current_Q+=withdrawal_flow
-      p, H = calc_section(Q = current_Q,prev_H=prev_H, z=z)
 
+      H = find_H(prev_H, i)
+      p = find_p(ro, H, z)
+        
       # Проверка на самотечный участок
       if p<=C.vapor_pressure:
         p=C.vapor_pressure
@@ -82,31 +81,36 @@ if __name__ == '__main__':
       # Всас НПС
       if index in nps_vsas_indexes:
         current_NPS = [nps for nps in NPS_list if nps.position == profile_x[index]][0]
-        H = H_list[index+1] - find_nps_H(Q, current_NPS.a, current_NPS.b)
-        p = ro*g*(H-profile_z[index])
-        if p < current_NPS.cavitation_margin:
-          Qmax = Qmax+0.2
-          break
+        dH = find_nps_H(Q, current_NPS.a, current_NPS.b)
+        nps_H_nagn = H_list[index+1]
+        H = H_list[index+1] - dH
+        p_vsas = ro*g*(H-z)
+        p = p_vsas
       p_list[index] = p
       H_list[index] = H
       index -= 1
-
     head_H_calc = H_list[0]
-    if iter<500:
-      print(head_H_calc, Q)
+    # print(head_H_calc)
     if abs(head_H_calc - head_H_idol) <= delta_H:
-      print('success')
-      print(f"Q = {round(Q, 2)}")
       break
 
     if (head_H_calc>head_H_idol):
       Qmax = Q
     else:
       Qmin = Q
-
-
     iter+=1
-  plot(profile_x, H_list, profile_z, [p*10**(-6) for p in p_list])
+
+  
+  isSuccess = True
+  for i in nps_vsas_indexes:
+    current_NPS = [nps for nps in NPS_list if nps.position == profile_x[i]][0]
+    if H_list[i]-profile_z[i]<current_NPS.cavitation_margin:
+      isSuccess = False
+  if isSuccess:
+    print('success')
+    plot(profile_x, H_list, profile_z, [p*10**(-6) for p in p_list])
+  else: 
+    print('fail')
 
 
 
