@@ -1,4 +1,11 @@
 import numpy as np
+
+class NPS:
+  def __init__(self, position, a, b, cavitation_margin):
+    self.position = position
+    self.a = a
+    self.b = b
+    self.cavitation_margin = cavitation_margin
 class Config: 
   L = 100000  # Протяженность участка, м
   diameter = 1.2  # Диаметр трубы, м
@@ -9,9 +16,11 @@ class Config:
   withdrawal_flow = -500  # Расход отбора/закачки через отвод, м³/ч (отрицательное значение - отбор)
 
   # 2. Гидравлическая характеристика агрегатов на НПС
-  a_head = 2500  # Коэффициент a в уравнении H = a - bQ^2, м
-  b_head = 0.0001  # Коэффициент b в уравнении H = a - bQ^2, м/(м³/ч)^2
-  cavitation_margin = 50000  # Противокавитационный запас насосов, Па
+  NPS_list = [
+    NPS(0, 310, 0.0000008, 0),
+    NPS(20000, 310, 0.0000008, 5),
+    NPS(60000, 310, 0.0000008, 5)
+  ]
 
   # 3. Свойства перекачиваемой нефти
   density = 850  # Плотность нефти, кг/м³
@@ -39,3 +48,6 @@ class Config:
 
 
   max_Q = 10 # м³/c
+
+
+

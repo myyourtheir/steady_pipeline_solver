@@ -38,3 +38,7 @@ def find_H(prev_H, i):
 
 def find_p(ro, H, z):
     return ro*g* (H - z)
+
+
+def find_nps_H(Q, a, b):
+    return a - b * Q**2

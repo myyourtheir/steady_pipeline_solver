@@ -2,7 +2,7 @@
 # 1. Характеристика технологического участка
 from pprint import pprint
 import numpy as np
-from src.basic_functions import find_H, find_Re, find_V, find_i, find_lyam, find_p
+from src.basic_functions import find_H, find_Re, find_V, find_i, find_lyam, find_nps_H, find_p
 from src.config import Config as C
 from src.plot import plot
 
@@ -18,6 +18,20 @@ viscosity_1 = C.viscosity_1
 withdrawal_position = C.withdrawal_position
 withdrawal_flow=C.withdrawal_flow
 has_withdrawal = C.has_withdrawal
+NPS_list = C.NPS_list
+
+
+def make_profiles():
+  profile_x = np.arange(0, L, dx)
+  profile_z = np.sin(profile_x / L * 10 * np.pi) * 50
+  # Учет НПС
+  nps_vsas_indexes = []
+  for nps in NPS_list:
+    index = np.where(profile_x == nps.position)[0][0]
+    nps_vsas_indexes.append(index)
+    profile_x = np.insert(profile_x, index, nps.position)
+    profile_z = np.insert(profile_z, index, nps.position)
+  return profile_x, profile_z,nps_vsas_indexes
 
 
 def calc_section(Q, prev_H, z):
@@ -31,8 +45,7 @@ def calc_section(Q, prev_H, z):
   return [p, H]
 
 if __name__ == '__main__':
-  profile_x = np.arange(0, L, dx)
-  profile_z = np.sin(profile_x / L * 10 * np.pi) * 50
+  profile_x, profile_z,nps_vsas_indexes = make_profiles()
 
   delta_H = 0.01
   can_continue = True
@@ -56,6 +69,7 @@ if __name__ == '__main__':
       x = profile_x[index]
       z = profile_z[index]
       current_Q = Q
+
       # Проверка на отвод
       if profile_x[index]>=withdrawal_position and has_withdrawal:
         current_Q+=withdrawal_flow
@@ -65,13 +79,21 @@ if __name__ == '__main__':
       if p<=C.vapor_pressure:
         p=C.vapor_pressure
         H=z+p/ro/g
-
+      # Всас НПС
+      if index in nps_vsas_indexes:
+        current_NPS = [nps for nps in NPS_list if nps.position == profile_x[index]][0]
+        H = H_list[index+1] - find_nps_H(Q, current_NPS.a, current_NPS.b)
+        p = ro*g*(H-profile_z[index])
+        if p < current_NPS.cavitation_margin:
+          Qmax = Qmax+0.2
+          break
       p_list[index] = p
       H_list[index] = H
       index -= 1
 
     head_H_calc = H_list[0]
-
+    if iter<500:
+      print(head_H_calc, Q)
     if abs(head_H_calc - head_H_idol) <= delta_H:
       print('success')
       print(f"Q = {round(Q, 2)}")
