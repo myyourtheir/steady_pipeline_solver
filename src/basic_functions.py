@@ -1,3 +1,5 @@
+from math import exp
+import math
 import numpy as np
 from src.config import Config as C
 
@@ -42,3 +44,11 @@ def find_p(ro, H, z):
 
 def find_nps_H(Q, a, b):
     return a - b * Q**2
+
+
+def find_viscosity(T):
+  return C.viscosity_0* exp(-C.Kt*(T-C.T_visc_0))
+
+
+def find_T(prev_T, Q, i):
+    return prev_T - (math.pi*C.Kt*C.diameter/C.density/Q/C.Cv * (prev_T-C.Tokr)-C.g*i/C.Cv)

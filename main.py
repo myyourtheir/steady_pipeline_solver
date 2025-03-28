@@ -2,8 +2,8 @@
 # 1. Характеристика технологического участка
 from pprint import pprint
 import numpy as np
-from src.basic_functions import find_H, find_Re, find_V, find_i, find_lyam, find_nps_H, find_p
-from src.config import Config as C
+from src.basic_functions import find_H, find_Re, find_T, find_V, find_i, find_lyam, find_nps_H, find_p, find_viscosity
+from src.config import NPS, Config as C
 from src.plot import plot
 
 L =C.L
@@ -23,9 +23,10 @@ NPS_list = C.NPS_list
 
 def make_profiles():
   profile_x = np.arange(0, L, dx)
-  # profile_z = np.zeros(profile_x.size)
-  profile_z = np.sin(profile_x / L * 10 * np.pi) * 100
+  profile_z = np.zeros(profile_x.size)
+  # profile_z = np.sin(profile_x / L * 10 * np.pi) * 100
   # Учет НПС
+  nps_mode_data=[]
   nps_vsas_indexes = []
   for nps in NPS_list:
     index = np.where(profile_x == nps.position)[0][0]
@@ -36,7 +37,64 @@ def make_profiles():
   return profile_x, profile_z,nps_vsas_indexes
 
 
+def make_initial_nps_mode_data(NPS_list: list[NPS]):
+  nps_mode_data = {}
+  for nps in NPS_list:
+    nps_mode_data[nps.title] = {
+      "title": nps.title,
+      "p_vsas": 0,
+      "p_nagn": 0,
+    }
+  return nps_mode_data
 
+def check_withdrawal_Q(x, Q):
+    if x>=withdrawal_position and has_withdrawal:
+      return Q+withdrawal_flow
+    return Q
+
+def pipeline_traverse(Q, i, H_list,T_list, profile_x, profile_z, nps_mode_data, with_temperature=False):
+  index = profile_x.size-2
+  while index>=0:
+    prev_H = H_list[index+1]
+    prev_T = T_list[index+1]
+    x = profile_x[index]
+    z = profile_z[index]
+    current_Q = Q
+    # Проверка на отвод
+    if x>=withdrawal_position and has_withdrawal:
+     current_Q+=withdrawal_flow
+
+    V = find_V(current_Q)
+    p_list[-1] = pL
+    H_list[-1] = HL
+    Re = find_Re(V, viscosity_1)
+    if with_temperature: 
+      T = find_T(i=i, Q=current_Q, prev_T=prev_T)
+      T_list[index] = T
+      viscosity = find_viscosity(T)
+      Re = find_Re(V, viscosity)
+    lyam = find_lyam(Re)
+    i = find_i(lyam, V)
+    H = find_H(prev_H, i)
+    p = find_p(ro, H, z)
+      
+    # Проверка на самотечный участок
+    if p<=C.vapor_pressure:
+      p=C.vapor_pressure
+      H=z+p/ro/g
+    # Всас НПС
+    if index in nps_vsas_indexes:
+      current_NPS = [nps for nps in NPS_list if nps.position == profile_x[index]][0]
+      dH = find_nps_H(Q, current_NPS.a, current_NPS.b)
+      H = H_list[index+1] - dH
+      p_vsas = ro*g*(H-z)
+      p = p_vsas
+      nps_mode_data[current_NPS.title]['p_vsas'] = p
+      nps_mode_data[current_NPS.title]['p_nagn'] = p_list[index+1]
+    p_list[index] = p
+    H_list[index] = H
+    i_list[index] = i
+    index -= 1
 
 if __name__ == '__main__':
   profile_x, profile_z,nps_vsas_indexes = make_profiles()
@@ -46,49 +104,29 @@ if __name__ == '__main__':
   HL = profile_z[-1] + pL/ ro/g
   head_H_idol = profile_z[0]+p0/(ro*g)
   iter=0
+  nps_mode_data = make_initial_nps_mode_data(NPS_list)
   while can_continue:
+
+    p_list = np.zeros(profile_x.size)
+    H_list = np.zeros(profile_x.size)
+    T_list = np.zeros(profile_x.size)
+    i_list = np.zeros(profile_x.size)
+
     Q=(Qmax+Qmin)/2
     V = find_V(Q)
+    p_list[-1] = pL
+    H_list[-1] = HL
     Re = find_Re(V, viscosity_1)
     lyam = find_lyam(Re)
     i = find_i(lyam, V)
-    p_list = np.zeros(profile_x.size)
-    H_list = np.zeros(profile_x.size)
-    p_list[-1] = pL
-    H_list[-1] = HL
+    i_list[-1] = i
+    T_list[-1] = C.Tk
 
-    index = profile_x.size-2
+    pipeline_traverse(Q=Q,i=i, H_list=H_list,T_list=T_list, profile_x=profile_x, nps_mode_data= nps_mode_data,profile_z=profile_z)
+    pipeline_traverse(Q=Q,i=i, H_list=H_list,T_list=T_list, profile_x=profile_x, nps_mode_data= nps_mode_data,profile_z=profile_z, with_temperature=True)
 
-    while index>=0:
 
-      prev_H = H_list[index+1]
-      x = profile_x[index]
-      z = profile_z[index]
 
-      current_Q = Q
-
-      # Проверка на отвод
-      if profile_x[index]>=withdrawal_position and has_withdrawal:
-        current_Q+=withdrawal_flow
-
-      H = find_H(prev_H, i)
-      p = find_p(ro, H, z)
-        
-      # Проверка на самотечный участок
-      if p<=C.vapor_pressure:
-        p=C.vapor_pressure
-        H=z+p/ro/g
-      # Всас НПС
-      if index in nps_vsas_indexes:
-        current_NPS = [nps for nps in NPS_list if nps.position == profile_x[index]][0]
-        dH = find_nps_H(Q, current_NPS.a, current_NPS.b)
-        nps_H_nagn = H_list[index+1]
-        H = H_list[index+1] - dH
-        p_vsas = ro*g*(H-z)
-        p = p_vsas
-      p_list[index] = p
-      H_list[index] = H
-      index -= 1
     head_H_calc = H_list[0]
     # print(head_H_calc)
     if abs(head_H_calc - head_H_idol) <= delta_H:
@@ -108,7 +146,9 @@ if __name__ == '__main__':
       isSuccess = False
   if isSuccess:
     print('success')
-    plot(profile_x, H_list, profile_z, [p*10**(-6) for p in p_list])
+    # pprint(nps_mode_data)
+    print(T_list)
+    plot(profile_x, H_list, profile_z, [p*10**(-6) for p in p_list], T_list)
   else: 
     print('fail')
 

@@ -1,11 +1,12 @@
 import numpy as np
 
 class NPS:
-  def __init__(self, position, a, b, cavitation_margin):
+  def __init__(self, position, a, b, cavitation_margin, title=''):
     self.position = position
     self.a = a
     self.b = b
     self.cavitation_margin = cavitation_margin
+    self.title = title
   def __str__(self):
     return f"NPS(position={self.position}, a={self.a}, b={self.b}, cavitation_margin={self.cavitation_margin})"
 class Config: 
@@ -19,17 +20,21 @@ class Config:
 
   # 2. Гидравлическая характеристика агрегатов на НПС
   NPS_list = [
-    NPS(0, 310, 0.0000008, 0),
-    NPS(22000, 310, 0.0000008, 5),
-    NPS(60000, 310, 0.0000008, 5)
+    NPS(0, 310, 0.0000008, 0, 'ГНПС'),
+    NPS(22000, 310, 0.0000008, 5, 'НПС 1'),
+    NPS(60000, 310, 0.0000008, 5, 'НПС 2')
   ]
 
   # 3. Свойства перекачиваемой нефти
   density = 850  # Плотность нефти, кг/м³
   viscosity_1 = 0.00001  # Кинематическая вязкость при температуре T1, м²/с
-  viscosity_2 = 0.0005  # Кинематическая вязкость при температуре T2, м²/с
-  T1, T2 = 20, 50  # Температуры для вязкости, °C
+  viscosity_0 = 0.0005  # Кинематическая вязкость при температуре T2, м²/с
+  T_visc_0 =20+273.15  # Температура вязкости, K
+  Tk = 60+273.15  # Температура в конце участка, K
+  Kt = 0.1  # Коэффициент теплопроводности, Вт/(м³/ч)
+  Tokr = 10+273.15  # Температура окружающей среды, K
   vapor_pressure = 50000  # Давление упругости насыщенных паров, Па
+  Cv = 2000 # Удельная теплоемкость нефти, Дж/(кг·K)
 
   # 4. Условия эксплуатации
   head_pressure = 3*10**6  # Подпор головной станции, Па
@@ -44,7 +49,6 @@ class Config:
 
   # Константы
   g = 9.81  # Ускорение свободного падения, м/с²
-  Cp = 2000  # Удельная теплоемкость нефти, Дж/(кг·°C)
   thermal_conductivity = 0.1  # Теплопроводность, Вт/(м·°C)
   dx = 1000
 
