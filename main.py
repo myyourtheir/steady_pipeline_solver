@@ -23,10 +23,10 @@ NPS_list = C.NPS_list
 
 def make_profiles():
   profile_x = np.arange(0, L, dx)
-  profile_z = np.zeros(profile_x.size)
-  # profile_z = np.sin(profile_x / L * 10 * np.pi) * 100
-  # Учет НПС
-  nps_mode_data=[]
+  # profile_z = np.zeros(profile_x.size)
+  profile_z = np.sin(profile_x / L * 10 * np.pi) * 100
+  profile_z[20] = 650
+  profile_z[40] = 250
   nps_vsas_indexes = []
   for nps in NPS_list:
     index = np.where(profile_x == nps.position)[0][0]
@@ -85,7 +85,7 @@ def pipeline_traverse(Q, i, H_list,T_list, profile_x, profile_z, nps_mode_data, 
     # Всас НПС
     if index in nps_vsas_indexes:
       current_NPS = [nps for nps in NPS_list if nps.position == profile_x[index]][0]
-      dH = find_nps_H(Q, current_NPS.a, current_NPS.b)
+      dH = find_nps_H(Q, current_NPS.a, current_NPS.b, current_NPS.n)
       H = H_list[index+1] - dH
       p_vsas = ro*g*(H-z)
       p = p_vsas

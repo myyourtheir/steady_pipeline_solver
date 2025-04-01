@@ -42,8 +42,8 @@ def find_p(ro, H, z):
     return ro*g* (H - z)
 
 
-def find_nps_H(Q, a, b):
-    return a - b * Q**2
+def find_nps_H(Q, a, b, n):
+    return (a - b * Q**2)*n
 
 
 def find_viscosity(T):
