@@ -25,7 +25,7 @@ def plot(profile_x, hydraulic_line, profile_z, pressures, temperatures ):
   plt.plot(profile_x, temperatures, label="Температура", color="blue")
   plt.title("Распределение температуры")
   plt.xlabel("Расстояние, м")
-  plt.ylabel("Температура, °C")
+  plt.ylabel("Температура, K")
   plt.legend()
 
   plt.tight_layout()

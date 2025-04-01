@@ -147,7 +147,7 @@ if __name__ == '__main__':
   if isSuccess:
     print('success')
     # pprint(nps_mode_data)
-    print(T_list)
+    # print(i_list)
     plot(profile_x, H_list, profile_z, [p*10**(-6) for p in p_list], T_list)
   else: 
     print('fail')
