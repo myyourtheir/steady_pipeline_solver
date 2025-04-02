@@ -2,7 +2,7 @@
 # 1. Характеристика технологического участка
 from pprint import pprint
 import numpy as np
-from src.basic_functions import find_H, find_Re, find_T, find_V, find_i, find_lyam, find_nps_H, find_p, find_viscosity
+from src.basic_functions import  find_H, find_Re, find_T, find_V, find_i, find_lyam, find_nps_H, find_p, find_viscosity
 from src.config import NPS, Config as C
 from src.plot import plot
 
@@ -52,7 +52,7 @@ def check_withdrawal_Q(x, Q):
       return Q+withdrawal_flow
     return Q
 
-def pipeline_traverse(Q, i, H_list,T_list, profile_x, profile_z, nps_mode_data, with_temperature=False):
+def pipeline_traverse(Q, i, H_list,T_list, profile_x, profile_z, nps_mode_data,visc_list=[], with_temperature=False):
   index = profile_x.size-2
   while index>=0:
     prev_H = H_list[index+1]
@@ -72,6 +72,7 @@ def pipeline_traverse(Q, i, H_list,T_list, profile_x, profile_z, nps_mode_data, 
       T = find_T(i=i, Q=current_Q, prev_T=prev_T)
       T_list[index] = T
       viscosity = find_viscosity(T)
+      visc_list[index] = viscosity
       Re = find_Re(V, viscosity)
     lyam = find_lyam(Re)
     i = find_i(lyam, V)
@@ -96,6 +97,33 @@ def pipeline_traverse(Q, i, H_list,T_list, profile_x, profile_z, nps_mode_data, 
     i_list[index] = i
     index -= 1
 
+
+def find_gravity_sections(profile_x, profile_z, p_list, H_list,Q, visc_list):
+    gravity_sections = []
+    for index in range(profile_x.size):
+      p = p_list[index]
+      H = H_list[index]
+      z=profile_z[index]
+      prev_p = p_list[index-1]
+      prev_H = H_list[index-1]
+      prev_z=profile_z[index-1]
+
+      is_gravity_index = p==C.vapor_pressure and H==z+p/ro/g
+      is_prev_gravity_index = prev_p==C.vapor_pressure and prev_H==prev_z+prev_p/ro/g
+
+      if not is_prev_gravity_index and is_gravity_index:
+          gravity_sections.append({'start': profile_x[index], "start_z": z, 'end': profile_x[index], "end_z":z})
+      if is_prev_gravity_index and not is_gravity_index:
+          gravity_sections[-1]['end'] = profile_x[index]
+          gravity_sections[-1]['end_z'] = z
+
+      for index,gravity_section in enumerate(gravity_sections):
+        dH = gravity_section['end_z']-gravity_section['start_z']
+        L = gravity_section['end']-gravity_section['start']
+        gravity_sections[index]['L'] = L
+    return gravity_sections
+
+
 if __name__ == '__main__':
   profile_x, profile_z,nps_vsas_indexes = make_profiles()
 
@@ -106,11 +134,11 @@ if __name__ == '__main__':
   iter=0
   nps_mode_data = make_initial_nps_mode_data(NPS_list)
   while can_continue:
-
     p_list = np.zeros(profile_x.size)
     H_list = np.zeros(profile_x.size)
     T_list = np.zeros(profile_x.size)
     i_list = np.zeros(profile_x.size)
+    visc_list = np.zeros(profile_x.size)
 
     Q=(Qmax+Qmin)/2
     V = find_V(Q)
@@ -123,7 +151,7 @@ if __name__ == '__main__':
     T_list[-1] = C.Tk
 
     pipeline_traverse(Q=Q,i=i, H_list=H_list,T_list=T_list, profile_x=profile_x, nps_mode_data= nps_mode_data,profile_z=profile_z)
-    pipeline_traverse(Q=Q,i=i, H_list=H_list,T_list=T_list, profile_x=profile_x, nps_mode_data= nps_mode_data,profile_z=profile_z, with_temperature=True)
+    pipeline_traverse(Q=Q,i=i, H_list=H_list,T_list=T_list, profile_x=profile_x, nps_mode_data= nps_mode_data,profile_z=profile_z,visc_list=visc_list, with_temperature=True)
 
 
 
@@ -146,8 +174,10 @@ if __name__ == '__main__':
       isSuccess = False
   if isSuccess:
     print('success')
-    # pprint(nps_mode_data)
-    # print(i_list)
+    pprint(nps_mode_data)
+    print(Q)
+    gravity_sections = find_gravity_sections(H_list=H_list, profile_x=profile_x, p_list=p_list, profile_z=profile_z, Q=Q, visc_list=visc_list)
+    pprint(gravity_sections)
     plot(profile_x, H_list, profile_z, [p*10**(-6) for p in p_list], T_list)
   else: 
     print('fail')
