@@ -52,3 +52,26 @@ def find_viscosity(T):
 
 def find_T(prev_T, Q, i):
     return prev_T + (math.pi*C.Kt*C.diameter/C.density/Q/C.Cv * (prev_T-C.Tokr)-C.g*i/C.Cv)*C.dx
+
+def bisection_method(a, b, func, tol=1e-6, max_iter=1000):
+    fa = func(a)
+    fb = func(b)
+    
+    if fa * fb >= 0:
+        raise ValueError("Функция не меняет знак на заданном интервале.")
+    
+    for _ in range(max_iter):
+        c = (a + b) / 2
+        fc = func(c)
+        
+        if abs(fc) < tol or (b - a) / 2 < tol:
+            return c
+        
+        if fa * fc < 0:
+            b = c
+            fb = fc
+        else:
+            a = c
+            fa = fc
+    
+    raise RuntimeError("Метод бисекции не сходится за заданное число итераций.")

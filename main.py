@@ -1,8 +1,7 @@
-# Исходные данные (пользователь может изменять)
-# 1. Характеристика технологического участка
+import math
 from pprint import pprint
 import numpy as np
-from src.basic_functions import  find_H, find_Re, find_T, find_V, find_i, find_lyam, find_nps_H, find_p, find_viscosity
+from src.basic_functions import  bisection_method, find_H, find_Re, find_T, find_V, find_i, find_lyam, find_nps_H, find_p, find_viscosity
 from src.config import NPS, Config as C
 from src.plot import plot
 
@@ -14,6 +13,7 @@ Qmax = C.max_Q
 Qmin = 0
 ro = C.density
 g = C.g
+d = C.diameter
 viscosity_1 = C.viscosity_1
 withdrawal_position = C.withdrawal_position
 withdrawal_flow=C.withdrawal_flow
@@ -24,9 +24,7 @@ NPS_list = C.NPS_list
 def make_profiles():
   profile_x = np.arange(0, L, dx)
   # profile_z = np.zeros(profile_x.size)
-  profile_z = np.sin(profile_x / L * 10 * np.pi) * 100
-  profile_z[20] = 650
-  profile_z[40] = 250
+  profile_z = np.sin(profile_x / L * 10 * np.pi) * 500
   nps_vsas_indexes = []
   for nps in NPS_list:
     index = np.where(profile_x == nps.position)[0][0]
@@ -117,10 +115,18 @@ def find_gravity_sections(profile_x, profile_z, p_list, H_list,Q, visc_list):
           gravity_sections[-1]['end'] = profile_x[index]
           gravity_sections[-1]['end_z'] = z
 
-      for index,gravity_section in enumerate(gravity_sections):
-        dH = gravity_section['end_z']-gravity_section['start_z']
-        L = gravity_section['end']-gravity_section['start']
-        gravity_sections[index]['L'] = L
+    for index,gravity_section in enumerate(gravity_sections):
+        
+      dH = gravity_section['end_z']-gravity_section['start_z']
+      L = gravity_section['end']-gravity_section['start']
+      gravity_sections[index]['L'] = L
+      alpha = math.atan(abs(dH)/L)
+      constant = (0.2419 * Q) / d**(8/3) / math.sqrt(abs(math.sin(alpha)))
+      def f(phi):
+        return phi - np.sin(phi) - (constant**(3/5)) * (phi**(2/5))
+ 
+      phi = bisection_method(0.1, math.pi, f)
+      gravity_sections[index]['filling degree'] = (phi-math.sin(phi))/2/math.pi
     return gravity_sections
 
 
@@ -156,7 +162,7 @@ if __name__ == '__main__':
 
 
     head_H_calc = H_list[0]
-    # print(head_H_calc)
+
     if abs(head_H_calc - head_H_idol) <= delta_H:
       break
 
@@ -173,11 +179,19 @@ if __name__ == '__main__':
     if H_list[i]-profile_z[i]<current_NPS.cavitation_margin:
       isSuccess = False
   if isSuccess:
-    print('success')
-    pprint(nps_mode_data)
-    print(Q)
+    print('Q = ', Q, 'm³/c')
+    pprint([{
+      'Станция': title,
+      'Давление в линии всасывания': f'{nps['p_vsas']/10**6} МПа',
+      'Давление в линии нагнетания': f'{nps['p_nagn']/10**6} МПа',
+    } for title, nps in nps_mode_data.items()])
     gravity_sections = find_gravity_sections(H_list=H_list, profile_x=profile_x, p_list=p_list, profile_z=profile_z, Q=Q, visc_list=visc_list)
-    pprint(gravity_sections)
+    pprint([{
+      'Начало самотечного участка': f'{section['start']} м',
+      'Конец самотечного участка': f'{section["end"]} м',
+      'Длина самотечного участка': f'{section["L"]} м',
+      'Степень заполнения': section["filling degree"],
+    } for section in gravity_sections])
     plot(profile_x, H_list, profile_z, [p*10**(-6) for p in p_list], T_list)
   else: 
     print('fail')
