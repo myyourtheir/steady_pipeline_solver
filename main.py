@@ -1,8 +1,9 @@
 import math
 from pprint import pprint
 import numpy as np
+from src.Helpers import NPS
 from src.basic_functions import  bisection_method, find_H, find_Re, find_T, find_V, find_i, find_lyam, find_nps_H, find_p, find_viscosity
-from src.config import NPS, Config as C
+from src.config import Config as C
 from src.plot import plot
 
 L =C.L
@@ -179,18 +180,20 @@ if __name__ == '__main__':
     if H_list[i]-profile_z[i]<current_NPS.cavitation_margin:
       isSuccess = False
   if isSuccess:
-    print('Q = ', Q, 'm³/c')
+    print('Расход: ', round(Q,2), 'm³/c')
+    print('НПС'.center(50, '_'))
     pprint([{
       'Станция': title,
-      'Давление в линии всасывания': f'{nps['p_vsas']/10**6} МПа',
-      'Давление в линии нагнетания': f'{nps['p_nagn']/10**6} МПа',
+      'Давление в линии всасывания': f'{round(nps['p_vsas']/10**6,2)} МПа',
+      'Давление в линии нагнетания': f'{round(nps['p_nagn']/10**6,2)} МПа',
     } for title, nps in nps_mode_data.items()])
     gravity_sections = find_gravity_sections(H_list=H_list, profile_x=profile_x, p_list=p_list, profile_z=profile_z, Q=Q, visc_list=visc_list)
+    print('Самотечные участки'.center(50, '_'))
     pprint([{
-      'Начало самотечного участка': f'{section['start']} м',
-      'Конец самотечного участка': f'{section["end"]} м',
-      'Длина самотечного участка': f'{section["L"]} м',
-      'Степень заполнения': section["filling degree"],
+      'Начало самотечного участка': f'{section['start']/10**3} км',
+      'Конец самотечного участка': f'{section["end"]/10**3} км',
+      'Длина самотечного участка': f'{section["L"]/10**3} км',
+      'Степень заполнения': round(section["filling degree"],2),
     } for section in gravity_sections])
     plot(profile_x, H_list, profile_z, [p*10**(-6) for p in p_list], T_list)
   else: 

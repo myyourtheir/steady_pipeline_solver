@@ -10,7 +10,7 @@ def plot(profile_x, hydraulic_line, profile_z, pressures, temperatures ):
   plt.title("Линия гидравлического уклона и профиль трубопровода")
   plt.xlabel("Расстояние, м")
   plt.ylabel("Высота, м")
-  plt.legend()
+  plt.legend(loc=1)
 
   # Распределение давления
   plt.subplot(3, 1, 2)
@@ -18,7 +18,7 @@ def plot(profile_x, hydraulic_line, profile_z, pressures, temperatures ):
   plt.title("Распределение давления")
   plt.xlabel("Расстояние, м")
   plt.ylabel("Давление, МПа")
-  plt.legend()
+  plt.legend(loc=1)
 
   # Распределение температуры
   plt.subplot(3, 1, 3)
@@ -26,7 +26,7 @@ def plot(profile_x, hydraulic_line, profile_z, pressures, temperatures ):
   plt.title("Распределение температуры")
   plt.xlabel("Расстояние, м")
   plt.ylabel("Температура, K")
-  plt.legend()
+  plt.legend(loc=1)
 
   plt.tight_layout()
   plt.show()

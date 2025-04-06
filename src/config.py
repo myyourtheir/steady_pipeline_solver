@@ -1,16 +1,8 @@
 import math
 import numpy as np
+from src.Helpers import NPS
 
-class NPS:
-  def __init__(self, position, a, b, cavitation_margin, title='',n=1):
-    self.position = position
-    self.a = a
-    self.b = b
-    self.cavitation_margin = cavitation_margin
-    self.title = title
-    self.n = n
-  def __str__(self):
-    return f"NPS(position={self.position}, a={self.a}, b={self.b}, cavitation_margin={self.cavitation_margin})"
+
 class Config: 
   L = 200000  # Протяженность участка, м
   diameter = 1.2  # Диаметр трубы, м
@@ -19,9 +11,9 @@ class Config:
 
   # 2. Гидравлическая характеристика агрегатов на НПС
   NPS_list = [
-    NPS(0, 310, 0.0000008, 0, 'ГНПС',1),
-    # NPS(22000, 310, 0.0000008, 5, 'НПС 1'),
-    # NPS(60000, 310, 0.0000008, 5, 'НПС 2')
+    NPS(0, 310, 0.0000008, 0, 'ГНПС', 2),
+    NPS(70000, 310, 0.0000008, 5, 'НПС 1'),
+    NPS(150000, 310, 0.0000008, 5, 'НПС 2')
   ]
 
   # 3. Свойства перекачиваемой нефти

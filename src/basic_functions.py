@@ -2,7 +2,7 @@ from math import exp
 import math
 import numpy as np
 from src.config import Config as C
-from scipy.optimize import fsolve
+
 d = C.diameter
 g = C.g
 vapor_pressure = C.vapor_pressure
